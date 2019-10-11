@@ -1,0 +1,10 @@
+project_id    = "testbuild-252808"
+cluster_name  = "terraform-test"
+network       = "default"
+region        = "us-central1"
+zone          = "us-central1-b"
+cache_name    = "test-cache"
+size_cache    = 1
+type_service  = "BASIC"
+version_redis = "REDIS_4_0"
+name_display  = "Prueba Redis Terraform"

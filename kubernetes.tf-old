@@ -1,0 +1,18 @@
+ provider "kubernetes" {
+   host     = "${google_container_cluster.Prueba-Redis.endpoint}"
+
+   client_certificate     = "${base64decode(google_container_cluster.primary.master_auth.0.client_certificate)}"
+   client_key             = "${base64decode(google_container_cluster.primary.master_auth.0.client_key)}"
+   cluster_ca_certificate = "${base64decode(google_container_cluster.primary.master_auth.0.cluster_ca_certificate)}"
+}
+
+resource "kubernetes_config_map" "redis" {
+   metadata {
+       name = "redisconnect"
+   }
+
+   data = {
+       REDISHOSTIP = "${google_redis_instance.Prueba-Redis.host}"
+       REDISPORT   = "${google_redis_instance.Prueba-Redis.port}"
+   }
+}
