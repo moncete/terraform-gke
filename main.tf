@@ -14,6 +14,10 @@ resource "google_container_cluster" "gke-cluster" {
       "https://www.googleapis.com/auth/monitoring",
     ]
   }
+  ####Avtivacion de VPC nativa (IP de alias)
+  ip_allocation_policy {
+    use_ip_aliases = true
+  }
 }
 
 #Creacion del recurs de Memoryinstane
