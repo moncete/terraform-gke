@@ -99,6 +99,7 @@ resource "kubernetes_config_map" "redis" {
 #}
 
 resource "kubernetes_service_account" "tiller" {
+
   metadata {
     name      = "tiller"
     namespace = "tiller"
@@ -149,6 +150,13 @@ provider "helm" {
 #  }
 
 resource "helm_release" "grafana" {
+  depends_on = [
+    google_container_cluster.gke-cluster,
+    kubernetes_namespace.tiller,
+    kubernetes_namespace.monitoring,
+    kubernetes_service_account.tiller,
+    kubernetes_cluster_role_binding.tiller
+  ]
   namespace = "monitoring"
   name        = "grafana"
   repository  = "https://kubernetes-charts.storage.googleapis.com"
@@ -159,6 +167,13 @@ resource "helm_release" "grafana" {
 }
 
 resource "helm_release" "prometheus" {
+  depends_on = [
+    google_container_cluster.gke-cluster,
+    kubernetes_namespace.tiller,
+    kubernetes_namespace.monitoring,
+    kubernetes_service_account.tiller,
+    kubernetes_cluster_role_binding.tiller
+  ]
   namespace = "monitoring"
   name        = "prometheus"
   repository  = "https://kubernetes-charts.storage.googleapis.com"
@@ -169,6 +184,13 @@ resource "helm_release" "prometheus" {
 }
 
 resource "helm_release" "influxdb" {
+  depends_on = [
+    google_container_cluster.gke-cluster,
+    kubernetes_namespace.tiller,
+    kubernetes_namespace.monitoring,
+    kubernetes_service_account.tiller,
+    kubernetes_cluster_role_binding.tiller
+  ]
   namespace = "monitoring"
   name        = "influxdb"
   repository  = "https://kubernetes-charts.storage.googleapis.com"
@@ -179,6 +201,13 @@ resource "helm_release" "influxdb" {
 }
 
 resource "helm_release" "telegraf" {
+  depends_on = [
+    google_container_cluster.gke-cluster,
+    kubernetes_namespace.tiller,
+    kubernetes_namespace.monitoring,
+    kubernetes_service_account.tiller,
+    kubernetes_cluster_role_binding.tiller
+  ]
   namespace = "monitoring"
   name        = "telegraf"
   repository  = "https://kubernetes-charts.storage.googleapis.com"
