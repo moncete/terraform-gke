@@ -14,24 +14,24 @@ resource "google_container_cluster" "gke-cluster" {
       "https://www.googleapis.com/auth/monitoring",
     ]
   }
-  ####Avtivacion de VPC nativa (IP de alias)
+  ####Activacion de VPC nativa (IP de alias)
   ip_allocation_policy {
     use_ip_aliases = true
   }
 }
 
-#Creacion del recurs de Memoryinstane
+#Creacion del recurso de Memoryinstane
 resource "google_redis_instance" "redis" {
 
-  name            = "${var.cache_name}"
-  memory_size_gb  = "${var.size_cache}"
-  tier            = "${var.type_service}"
-  region          = "${var.region}"
-  location_id     = "${var.zone}"
+  name           = "${var.cache_name}"
+  memory_size_gb = "${var.size_cache}"
+  tier           = "${var.type_service}"
+  region         = "${var.region}"
+  location_id    = "${var.zone}"
 
-  redis_version   = "${var.version_redis}"
+  redis_version = "${var.version_redis}"
 
-  display_name    = "${var.name_display}"
+  display_name = "${var.name_display}"
 }
 
 ###### Datos para Conexion a GKE y despligues #############
@@ -51,16 +51,22 @@ provider "kubernetes" {
 
 ######### Creacion Namespace Monitoring
 resource "kubernetes_namespace" "tiller" {
-  metadata{
+  metadata {
     name = "tiller"
   }
 }
 resource "kubernetes_namespace" "monitoring" {
-  metadata{
+  metadata {
     name = "monitoring"
   }
 }
 
+#########Creacion Namespace Ingress
+resource "kubernetes_namespace" "ingress" {
+  metadata {
+    name = "ingress"
+  }
+}
 ########################################
 
 ######### Creacion del ConfigMap 
@@ -106,22 +112,22 @@ resource "kubernetes_service_account" "tiller" {
   }
 }
 
-resource "kubernetes_cluster_role_binding" "tiller"{
+resource "kubernetes_cluster_role_binding" "tiller" {
   metadata {
     name = "tiller-admin-binding"
   }
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-    kind = "ClusterRole"
-    name = "cluster-admin"
-    
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+
   }
 
   subject {
     api_group = ""
-    kind = "ServiceAccount"
-    name = "tiller"
+    kind      = "ServiceAccount"
+    name      = "tiller"
     namespace = "tiller"
   }
 }
@@ -131,12 +137,12 @@ resource "kubernetes_cluster_role_binding" "tiller"{
 ########################## Deploy con Helm ########################
 
 provider "helm" {
-  namespace = "tiller"
-  service_account   = "tiller"
+  namespace       = "tiller"
+  service_account = "tiller"
 
   kubernetes {
     load_config_file = false
-  
+
     host                   = "https://${google_container_cluster.gke-cluster.endpoint}"
     token                  = "${data.google_client_config.default.access_token}"
     cluster_ca_certificate = "${base64decode(google_container_cluster.gke-cluster.master_auth.0.cluster_ca_certificate)}"
@@ -157,13 +163,13 @@ resource "helm_release" "grafana" {
     kubernetes_service_account.tiller,
     kubernetes_cluster_role_binding.tiller
   ]
-  namespace = "monitoring"
-  name        = "grafana"
-  repository  = "https://kubernetes-charts.storage.googleapis.com"
-  chart       = "grafana"
+  namespace     = "monitoring"
+  name          = "grafana"
+  repository    = "https://kubernetes-charts.storage.googleapis.com"
+  chart         = "grafana"
   recreate_pods = "true"
-  
-  values      = [ "${file("./helmconf/grafanavalues.yaml")}" ]
+
+  values = ["${file("./helmconf/grafanavalues.yaml")}"]
 }
 
 resource "helm_release" "prometheus" {
@@ -174,13 +180,13 @@ resource "helm_release" "prometheus" {
     kubernetes_service_account.tiller,
     kubernetes_cluster_role_binding.tiller
   ]
-  namespace = "monitoring"
-  name        = "prometheus"
-  repository  = "https://kubernetes-charts.storage.googleapis.com"
-  chart       = "prometheus"
+  namespace     = "monitoring"
+  name          = "prometheus"
+  repository    = "https://kubernetes-charts.storage.googleapis.com"
+  chart         = "prometheus"
   recreate_pods = "true"
-  
-  values      = [ "${file("./helmconf/prometheusvalues.yaml")}" ]
+
+  values = ["${file("./helmconf/prometheusvalues.yaml")}"]
 }
 
 resource "helm_release" "influxdb" {
@@ -191,13 +197,13 @@ resource "helm_release" "influxdb" {
     kubernetes_service_account.tiller,
     kubernetes_cluster_role_binding.tiller
   ]
-  namespace = "monitoring"
-  name        = "influxdb"
-  repository  = "https://kubernetes-charts.storage.googleapis.com"
+  namespace     = "monitoring"
+  name          = "influxdb"
+  repository    = "https://kubernetes-charts.storage.googleapis.com"
   recreate_pods = "true"
-  chart       = "influxdb"
-  
-  values      = [ "${file("./helmconf/influxdbvalues.yaml")}" ]
+  chart         = "influxdb"
+
+  values = ["${file("./helmconf/influxdbvalues.yaml")}"]
 }
 
 resource "helm_release" "telegraf" {
@@ -208,17 +214,34 @@ resource "helm_release" "telegraf" {
     kubernetes_service_account.tiller,
     kubernetes_cluster_role_binding.tiller
   ]
-  namespace = "monitoring"
-  name        = "telegraf"
-  repository  = "https://kubernetes-charts.storage.googleapis.com"
+  namespace     = "monitoring"
+  name          = "telegraf"
+  repository    = "https://kubernetes-charts.storage.googleapis.com"
   recreate_pods = "true"
-  chart       = "telegraf"
+  chart         = "telegraf"
 
   set {
     name  = "single.enabled"
     value = "false"
   }
 
-  values      = [ "${file("./helmconf/telegrafvalues.yaml")}" ]
+  values = ["${file("./helmconf/telegrafvalues.yaml")}"]
 
+}
+
+resource "helm_release" "ingress" {
+  depends_on = [
+    google_container_cluster.gke-cluster,
+    kubernetes_namespace.tiller,
+    kubernetes_namespace.ingress,
+    kubernetes_service_account.tiller,
+    kubernetes_cluster_role_binding.tiller
+  ]
+  namespace     = "ingress"
+  name          = "nginx-ingress"
+  repository    = "https://kubernetes-charts.storage.googleapis.com"
+  chart         = "nginx-ingress"
+  recreate_pods = "true"
+
+  values = ["${file("./helmconf/ingressvalues.yaml")}"]
 }
